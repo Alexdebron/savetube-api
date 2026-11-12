@@ -51,6 +51,22 @@ class SaveTube {
     return cdn;
   }
 
+  normalizeDownloadUrl(value) {
+    if (typeof value !== 'string' || !value) return null;
+
+    // SaveTube currently returns audio files under /file, but those URLs
+    // redirect to the homepage. The same file is available under /media.
+    try {
+      const url = new URL(value);
+      if (url.pathname.startsWith('/file/')) {
+        url.pathname = url.pathname.replace(/^\/file\//, '/media/');
+      }
+      return url.toString();
+    } catch (_) {
+      return value;
+    }
+  }
+
   decrypt(encoded) {
     if (typeof encoded !== 'string' || !encoded) {
       throw new Error('Invalid encrypted info response');
@@ -105,7 +121,9 @@ class SaveTube {
       });
 
       const payload = downloadResponse.data;
-      const downloadUrl = payload?.data?.downloadUrl || payload?.downloadUrl;
+      const downloadUrl = this.normalizeDownloadUrl(
+        payload?.data?.downloadUrl || payload?.downloadUrl
+      );
       if (payload?.status !== true || !downloadUrl) {
         throw new Error(payload?.message || 'SaveTube did not return a download URL');
       }
